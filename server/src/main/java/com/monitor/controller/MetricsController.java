@@ -43,7 +43,9 @@ public class MetricsController {
 
     @GetMapping("/metrics/process/latest")
     public ResponseEntity<?> latestProcessMetrics(@RequestParam Long projectId) {
-        return ResponseEntity.ok(Map.of("ok", true, "data", metricsService.getLatestProcessMetrics(projectId)));
+        var latest = metricsService.getLatestProcessMetrics(projectId);
+        // 非 PM2 项目（如 systemd 托管的 MD Viewer）无进程指标，返回 data: null 而非报错
+        return ResponseEntity.ok(Map.of("ok", true, "data", latest == null ? "" : latest));
     }
 
     @GetMapping("/health-checks")

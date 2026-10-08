@@ -14,6 +14,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handle(Exception e) {
         log.error("Unhandled exception: {}", e.getMessage(), e);
-        return ResponseEntity.status(500).body(Map.of("ok", false, "error", e.getMessage()));
+        // e.getMessage() 可能为 null（如 NPE），Map.of 不允许 null 值，需兜底
+        String msg = e.getMessage();
+        if (msg == null || msg.isBlank()) {
+            msg = e.getClass().getSimpleName();
+        }
+        return ResponseEntity.status(500).body(Map.of("ok", false, "error", msg));
     }
 }
