@@ -1,7 +1,8 @@
 # 生产环境配置 —— 部署到 111.231.57.177 时使用（--spring.profiles.active=prod）
 server:
-  # 4000 与被监控服务端口避让（8090/3000/80/8081）
-  port: 4000
+  # 对外由 Nginx 监听 4000（静态前端 + /api、/ws 反代到这里）；
+  # 后端本进程绑定 127.0.0.1:48080，不直接对外
+  port: 48080
 
 spring:
   datasource:
@@ -40,6 +41,13 @@ monitor:
       - "http://111.231.57.177"
       - "http://111.231.57.177:8081"
       - "http://111.231.57.177:4000"
+
+# Actuator 存活探针供 Nginx/systemd 使用
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
 
 logging:
   level:

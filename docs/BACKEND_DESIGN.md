@@ -4,12 +4,12 @@
 > 监控目标：`111.231.57.177` 上的 2 套项目 4 个服务（MD Viewer 前/后端、TaskManager 前/后端）
 > 技术栈与被监控的 MD Viewer 后端（Spring Boot 3.2.5 / Java 17）保持一致，便于团队统一维护。
 >
-> **端口规划（2026-10-08 实测确认）**：
+> **端口规划（2026-10-08 实测确认，部署架构）**：
 > - 目标服务器已占用端口：22(SSH)、80(TaskManager前端)、8081(MD Viewer前端)、3000(TaskManager后端)、8090(MD Viewer后端)、27017(MongoDB)
-> - 监控后端生产端口定为 **4000**（已确认空闲，避开上述业务端口）
-> - 本地开发环境：本机 4000 已被其他进程占用，开发运行时用 `--server.port=48080` 临时覆盖；`web/vite.config.js` 的代理指向 48080
+> - 生产部署架构：**Nginx 监听 4000**（托管监控前端静态文件 + `/api`、`/ws` 反代到后端）；**Spring Boot 后端绑定 `127.0.0.1:48080`**（仅本机，不对外）
+> - 本地开发环境：后端同样用 48080（`--server.port=48080`，因本机 4000 被占）；`web/vite.config.js` 的代理指向 48080，与生产端口一致
 > - 线上前端 SDK（已注入两项目 index.html）的 `data-report-url` 指向 `http://111.231.57.177:4000/api/error/report`，
->   后端按 4000 端口部署后即自动生效，无需改动线上 SDK
+>   由 Nginx 反代到后端 48080，无需改动线上 SDK
 
 ## 1. 技术选型
 
@@ -489,7 +489,7 @@ systemctl restart monitor-server
 `application-prod.yml` 关键配置（实际文件见 `server/src/main/resources/application-prod.yml`）：
 ```yaml
 server:
-  port: 4000
+  port: 48080                    # 后端仅绑本机，对外由 Nginx 4000 反代
 spring:
   datasource:
     url: jdbc:sqlite:${MONITOR_DB_PATH:/opt/monitor/data/monitor.sqlite}
@@ -513,6 +513,6 @@ monitor:
       - "http://111.231.57.177:8081"
 ```
 
-> 注：监控后端部署在 `111.231.57.177` 上，已实测避开全部占用端口
-> （22/80/8081/3000/8090/27017），使用 **4000** 端口；如需 HTTPS 可后续在 Nginx 增加 `monitor.conf` 反代。
+> 注：部署采用「Nginx 4000 对外（静态前端 + 反代 `/api`、`/ws`）+ 后端 48080 仅本机」架构，
+> 已实测避开线上全部占用端口（22/80/8081/3000/8090/27017）。
 > 部署配套文件均已入库：`server/monitor-server.service`（unit）、`server/monitor.env.example`（环境变量模板）。

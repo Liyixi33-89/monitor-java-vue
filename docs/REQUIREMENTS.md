@@ -142,7 +142,7 @@
 - **采集方式**：后端通过 JSch 定时 SSH 连接服务器执行采集脚本（`top`/`free`/`df`/`pm2 jlist`/`systemctl`/`journalctl`/日志 `tail` 并解析输出），无需在目标机上额外安装 Agent，降低接入成本（对应 F1 轻量模式；F2 常驻 Agent 保留为后续演进项）。
 - **后端**：Java 17 + Spring Boot 3.2.5 + MyBatis-Plus + SQLite（Flyway 建表），定时任务 `@Scheduled`，详见 `docs/BACKEND_DESIGN.md`。
 - **前端**：Vite + Vue3 + ECharts + Element Plus，详见 `docs/FRONTEND_DESIGN.md`。
-- **监控后端端口**：生产 **4000**（实测避开线上已占用的 22/80/8081/3000/8090/27017）；本地开发用 48080（本机 4000 被占）。
+- **监控后端端口**：生产 **Nginx 4000 对外**（前端静态 + 反代 `/api`、`/ws`），后端进程绑 `127.0.0.1:48080` 仅本机；本地开发后端同样 48080（本机 4000 被占）。
 - **告警引擎**：规则引擎模块，周期扫描最新指标 vs 阈值规则，触发后调用对应 Webhook。
 - **后端报错采集**：
   1. SSH 定期 `tail` / `pm2 logs --lines` 读取被监控后端项目日志，正则匹配 `ERROR`/`Exception`/`FATAL` 等关键字；
