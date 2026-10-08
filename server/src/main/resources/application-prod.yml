@@ -3,6 +3,7 @@ server:
   # 对外由 Nginx 监听 4000（静态前端 + /api、/ws 反代到这里）；
   # 后端本进程绑定 127.0.0.1:48080，不直接对外
   port: 48080
+  address: 127.0.0.1
 
 spring:
   datasource:
