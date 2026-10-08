@@ -1,0 +1,28 @@
+# ---- 构建产物 ----
+server/target/
+web/dist/
+web/node_modules/
+web/vite-dev.log
+*.class
+*.jar
+
+# ---- 运行时数据（含采集到的真实指标，不入库）----
+server/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# ---- IDE / 系统 ----
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# ---- 本地环境 ----
+.env
+.env.local
+*.local
+
+# ---- 会话临时文件 ----
+.session_tmps/

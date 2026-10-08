@@ -1,0 +1,16 @@
+# /etc/systemd/system/monitor-server.service
+[Unit]
+Description=Monitor Server (Spring Boot)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/monitor
+EnvironmentFile=/opt/monitor/monitor.env
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /opt/monitor/monitor-server.jar --spring.profiles.active=prod
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

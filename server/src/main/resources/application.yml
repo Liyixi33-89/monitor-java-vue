@@ -1,0 +1,45 @@
+server:
+  port: 4000
+
+spring:
+  application:
+    name: monitor-server
+  datasource:
+    url: jdbc:sqlite:${MONITOR_DB_PATH:./data/monitor.sqlite}
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+      connection-init-sql: PRAGMA journal_mode=WAL;
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+monitor:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-please-32bytes}
+    expire-minutes: 720
+  target-servers:
+    - id: 1
+      name: "线上服务器-1"
+      host: "111.231.57.177"
+      ssh-port: 22
+      ssh-user: "root"
+      ssh-key-path: "${SSH_KEY_PATH:~/.ssh/id_rsa}"
+  notify:
+    wecom-webhook-url: ${WECOM_WEBHOOK_URL:}
+    dingtalk-webhook-url: ${DINGTALK_WEBHOOK_URL:}
+  cors:
+    allowed-origins:
+      - "http://localhost:5173"
+      - "http://111.231.57.177"
+      - "http://111.231.57.177:8081"
+
+logging:
+  level:
+    com.monitor: INFO
