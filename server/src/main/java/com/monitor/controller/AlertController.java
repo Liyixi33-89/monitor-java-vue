@@ -50,12 +50,19 @@ public class AlertController {
 
     @GetMapping("/alert-logs")
     public ResponseEntity<?> listLogs(@RequestParam(required = false) Long projectId,
-                                      @RequestParam(defaultValue = "100") int limit) {
+                                      @RequestParam(defaultValue = "1") int page,
+                                      @RequestParam(defaultValue = "20") int pageSize) {
+        int size = Math.min(Math.max(pageSize, 1), 100);
+        int offset = (Math.max(page, 1) - 1) * size;
         var query = Wrappers.<AlertLog>lambdaQuery()
                 .orderByDesc(AlertLog::getTriggeredAt)
-                .last("LIMIT " + Math.min(limit, 500));
+                .last("LIMIT " + size + " OFFSET " + offset);
         if (projectId != null) query.eq(AlertLog::getProjectId, projectId);
         List<AlertLog> list = alertLogMapper.selectList(query);
-        return ResponseEntity.ok(Map.of("ok", true, "data", list));
+
+        var countQuery = Wrappers.<AlertLog>lambdaQuery();
+        if (projectId != null) countQuery.eq(AlertLog::getProjectId, projectId);
+        long total = alertLogMapper.selectCount(countQuery);
+        return ResponseEntity.ok(Map.of("ok", true, "data", list, "total", total, "page", page, "pageSize", size));
     }
 }

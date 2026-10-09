@@ -94,7 +94,7 @@ function goDetail(id) {
 
 async function refresh() {
   projects.value = (await listProjects()).data
-  const errs = (await listErrors({ status: 'open', limit: 300 })).data
+  const errs = (await listErrors({ status: 'open', page: 1, pageSize: 100 })).data
   const counts = {}
   errs.forEach((e) => {
     const ts = new Date(e.lastSeenAt).getTime()
@@ -106,7 +106,7 @@ async function refresh() {
       getLatestProcessMetrics(p.id).then((r) => { processMap.value[p.id] = r.data })
     }
     if (p.healthCheckUrl) {
-      getHealthChecks({ projectId: p.id, limit: 1 }).then((r) => {
+      getHealthChecks({ projectId: p.id, page: 1, pageSize: 1 }).then((r) => {
         if (r.data && r.data.length) healthMap.value[p.id] = r.data[0]
       })
     }

@@ -25,7 +25,7 @@
         </el-select>
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="load">查询</el-button>
+        <el-button type="primary" @click="onSearch">查询</el-button>
       </el-form-item>
     </el-form>
 
@@ -61,6 +61,17 @@
       </el-table-column>
     </el-table>
 
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+      :page-sizes="[10, 20, 50, 100]"
+      layout="total, sizes, prev, pager, next, jumper"
+      style="margin-top: 12px; justify-content: flex-end"
+      @size-change="onSizeChange"
+      @current-change="load"
+    />
+
     <el-drawer v-model="drawerVisible" title="错误详情" size="50%">
       <div v-if="detail">
         <el-descriptions :column="1" border size="small">
@@ -93,13 +104,28 @@ const type = ref('')
 const status = ref('')
 const drawerVisible = ref(false)
 const detail = ref(null)
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
 
 async function load() {
-  const params = { limit: 200 }
+  const params = { page: page.value, pageSize: pageSize.value }
   if (projectId.value) params.projectId = projectId.value
   if (type.value) params.type = type.value
   if (status.value) params.status = status.value
-  errors.value = (await listErrors(params)).data
+  const res = await listErrors(params)
+  errors.value = res.data
+  total.value = res.total
+}
+
+function onSizeChange() {
+  page.value = 1
+  load()
+}
+
+function onSearch() {
+  page.value = 1
+  load()
 }
 
 function openDetail(row) {

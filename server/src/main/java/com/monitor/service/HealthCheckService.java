@@ -1,5 +1,7 @@
 package com.monitor.service;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.monitor.entity.HealthCheck;
 import com.monitor.entity.Project;
 import com.monitor.mapper.HealthCheckMapper;
@@ -66,6 +68,15 @@ public class HealthCheckService {
 
     public List<HealthCheck> getRecent(Long projectId, int limit) {
         return healthCheckMapper.findRecent(projectId, limit);
+    }
+
+    /** 分页查询健康检查历史 */
+    public Page<HealthCheck> getRecentPaged(Long projectId, int page, int pageSize) {
+        Page<HealthCheck> p = new Page<>(page, pageSize);
+        return healthCheckMapper.selectPage(p,
+                Wrappers.<HealthCheck>lambdaQuery()
+                        .eq(HealthCheck::getProjectId, projectId)
+                        .orderByDesc(HealthCheck::getTimestamp));
     }
 
     /** 最近 n 次是否连续失败（供告警规则判定） */

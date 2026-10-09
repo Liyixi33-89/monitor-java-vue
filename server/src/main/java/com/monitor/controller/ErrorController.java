@@ -81,14 +81,25 @@ public class ErrorController {
     public ResponseEntity<?> list(@RequestParam(required = false) Long projectId,
                                   @RequestParam(required = false) String type,
                                   @RequestParam(required = false) String status,
-                                  @RequestParam(defaultValue = "100") int limit) {
+                                  @RequestParam(defaultValue = "1") int page,
+                                  @RequestParam(defaultValue = "20") int pageSize) {
+        // 兼容旧调用：未传分页参数时退回 limit 模式由前端保证不传 page 即可
+        int size = Math.min(Math.max(pageSize, 1), 100);
+        int offset = (Math.max(page, 1) - 1) * size;
         var query = Wrappers.<ErrorEvent>lambdaQuery()
                 .orderByDesc(ErrorEvent::getLastSeenAt)
-                .last("LIMIT " + Math.min(limit, 500));
+                .last("LIMIT " + size + " OFFSET " + offset);
         if (projectId != null) query.eq(ErrorEvent::getProjectId, projectId);
         if (type != null && !type.isBlank()) query.eq(ErrorEvent::getType, type);
         if (status != null && !status.isBlank()) query.eq(ErrorEvent::getStatus, status);
         List<ErrorEvent> list = errorEventMapper.selectList(query);
+
+        // 总条数（同过滤条件）
+        var countQuery = Wrappers.<ErrorEvent>lambdaQuery();
+        if (projectId != null) countQuery.eq(ErrorEvent::getProjectId, projectId);
+        if (type != null && !type.isBlank()) countQuery.eq(ErrorEvent::getType, type);
+        if (status != null && !status.isBlank()) countQuery.eq(ErrorEvent::getStatus, status);
+        long total = errorEventMapper.selectCount(countQuery);
 
         // 附带项目名称，便于前端直接展示
         Map<Long, String> projectNames = new ConcurrentHashMap<>();
@@ -110,7 +121,7 @@ public class ErrorController {
             m.put("status", e.getStatus());
             return m;
         }).toList();
-        return ResponseEntity.ok(Map.of("ok", true, "data", enriched));
+        return ResponseEntity.ok(Map.of("ok", true, "data", enriched, "total", total, "page", page, "pageSize", size));
     }
 
     @GetMapping("/errors/{id}")

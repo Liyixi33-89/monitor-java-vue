@@ -50,9 +50,12 @@ public class MetricsController {
 
     @GetMapping("/health-checks")
     public ResponseEntity<?> healthChecks(@RequestParam Long projectId,
-                                          @RequestParam(defaultValue = "20") int limit) {
-        List<HealthCheck> list = healthCheckService.getRecent(projectId, limit);
-        return ResponseEntity.ok(Map.of("ok", true, "data", list));
+                                          @RequestParam(defaultValue = "1") int page,
+                                          @RequestParam(defaultValue = "10") int pageSize) {
+        int size = Math.min(Math.max(pageSize, 1), 100);
+        var pageResult = healthCheckService.getRecentPaged(projectId, Math.max(page, 1), size);
+        return ResponseEntity.ok(Map.of("ok", true, "data", pageResult.getRecords(),
+                "total", pageResult.getTotal(), "page", page, "pageSize", size));
     }
 
     /** 手动触发一次健康检查 */

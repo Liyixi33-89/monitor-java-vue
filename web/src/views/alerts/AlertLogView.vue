@@ -24,6 +24,17 @@
       </template>
     </el-table-column>
   </el-table>
+
+  <el-pagination
+    v-model:current-page="page"
+    v-model:page-size="pageSize"
+    :total="total"
+    :page-sizes="[10, 20, 50, 100]"
+    layout="total, sizes, prev, pager, next, jumper"
+    style="margin-top: 12px; justify-content: flex-end"
+    @size-change="onSizeChange"
+    @current-change="load"
+  />
 </template>
 
 <script setup>
@@ -32,8 +43,20 @@ import { listAlertLogs } from '../../api'
 import { formatTime } from '../../utils/format'
 
 const logs = ref([])
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
 
-onMounted(async () => {
-  logs.value = (await listAlertLogs({ limit: 200 })).data
-})
+async function load() {
+  const res = await listAlertLogs({ page: page.value, pageSize: pageSize.value })
+  logs.value = res.data
+  total.value = res.total
+}
+
+function onSizeChange() {
+  page.value = 1
+  load()
+}
+
+onMounted(load)
 </script>

@@ -40,9 +40,19 @@
             </template>
           </el-table-column>
         </el-table>
+        <el-pagination
+          v-model:current-page="hcPage"
+          v-model:page-size="hcPageSize"
+          :total="hcTotal"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          style="margin-top: 12px; justify-content: flex-end"
+          @size-change="onHcSizeChange"
+          @current-change="loadHealthChecks"
+        />
       </el-tab-pane>
 
-      <el-tab-pane :label="`报错列表（${errors.length}）`">
+      <el-tab-pane :label="`报错列表（${errTotal}）`">
         <el-table :data="errors" size="small" border>
           <el-table-column prop="lastSeenAt" label="最近发生" width="180">
             <template #default="{ row }">{{ formatTime(row.lastSeenAt) }}</template>
@@ -63,6 +73,16 @@
             </template>
           </el-table-column>
         </el-table>
+        <el-pagination
+          v-model:current-page="errPage"
+          v-model:page-size="errPageSize"
+          :total="errTotal"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          style="margin-top: 12px; justify-content: flex-end"
+          @size-change="onErrSizeChange"
+          @current-change="loadErrors"
+        />
       </el-tab-pane>
 
       <el-tab-pane label="资源趋势">
@@ -89,12 +109,39 @@ const errors = ref([])
 const checking = ref(false)
 const chartRef = ref(null)
 let chart = null
+const hcPage = ref(1)
+const hcPageSize = ref(10)
+const hcTotal = ref(0)
+const errPage = ref(1)
+const errPageSize = ref(10)
+const errTotal = ref(0)
+
+async function loadHealthChecks() {
+  const res = await getHealthChecks({ projectId, page: hcPage.value, pageSize: hcPageSize.value })
+  healthChecks.value = res.data
+  hcTotal.value = res.total
+}
+
+async function loadErrors() {
+  const res = await listErrors({ projectId, page: errPage.value, pageSize: errPageSize.value })
+  errors.value = res.data
+  errTotal.value = res.total
+}
+
+function onHcSizeChange() {
+  hcPage.value = 1
+  loadHealthChecks()
+}
+
+function onErrSizeChange() {
+  errPage.value = 1
+  loadErrors()
+}
 
 async function load() {
   project.value = (await getProject(projectId)).data
   latestProcess.value = (await getLatestProcessMetrics(projectId)).data
-  healthChecks.value = (await getHealthChecks({ projectId, limit: 20 })).data
-  errors.value = (await listErrors({ projectId, limit: 100 })).data
+  await Promise.all([loadHealthChecks(), loadErrors()])
 }
 
 async function doCheck() {
@@ -102,7 +149,7 @@ async function doCheck() {
   try {
     await triggerHealthCheck(projectId)
     ElMessage.success('健康检查完成')
-    healthChecks.value = (await getHealthChecks({ projectId, limit: 20 })).data
+    await loadHealthChecks()
   } finally {
     checking.value = false
   }
@@ -111,7 +158,7 @@ async function doCheck() {
 async function doResolve(id) {
   await resolveError(id)
   ElMessage.success('已标记处理')
-  errors.value = (await listErrors({ projectId, limit: 100 })).data
+  await loadErrors()
 }
 
 async function renderChart() {
