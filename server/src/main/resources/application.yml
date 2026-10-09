@@ -21,6 +21,10 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 monitor:
+  # 发布自动监听（默认关闭，prod 开启）
+  deploy-watch:
+    enabled: false
+    watches: []
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-32bytes}
     expire-minutes: 720

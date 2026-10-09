@@ -23,6 +23,15 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 monitor:
+  # 发布自动监听：监控本机 4 个被监控项目的部署产物，产物变化 = 自动登记发布记录
+  # 同一项目 5 分钟内多次变化合并为一条（CI 中间步骤不产生多条）
+  deploy-watch:
+    enabled: true
+    watches:
+      - "1:/opt/mdviewer/frontend/index.html"              # MD Viewer 前端
+      - "2:/opt/mdviewer/md-viewer-server.jar"            # MD Viewer 后端
+      - "3:/var/www/taskmanager/frontend/dist/index.html" # TaskManager 前端
+      - "4:/var/www/taskmanager/backend/src/app.js"       # TaskManager 后端
   jwt:
     # 生产环境必须通过环境变量注入，不再提供默认值
     secret: ${JWT_SECRET}

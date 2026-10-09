@@ -44,11 +44,12 @@ public class DeploymentController {
             m.put("id", d.getId());
             m.put("projectId", d.getProjectId());
             m.put("projectName", projectNames.getOrDefault(d.getProjectId(), "未知项目"));
-            m.put("version", d.getVersion());
-            m.put("operator", d.getOperator());
-            m.put("remark", d.getRemark());
-            m.put("result", d.getResult());
-            m.put("deployedAt", d.getDeployedAt());
+            // ConcurrentHashMap 不允许 null 值，可空字段统一转空串
+            m.put("version", d.getVersion() == null ? "" : d.getVersion());
+            m.put("operator", d.getOperator() == null ? "" : d.getOperator());
+            m.put("remark", d.getRemark() == null ? "" : d.getRemark());
+            m.put("result", d.getResult() == null ? "" : d.getResult());
+            m.put("deployedAt", d.getDeployedAt() == null ? "" : d.getDeployedAt());
             return m;
         }).toList();
         return ResponseEntity.ok(Map.of("ok", true, "data", enriched,
