@@ -10,6 +10,7 @@
         <el-menu-item index="/trends"><span>历史趋势</span></el-menu-item>
         <el-menu-item index="/errors"><span>错误监控</span></el-menu-item>
         <el-menu-item index="/alerts"><span>告警记录</span></el-menu-item>
+        <el-menu-item index="/deployments"><span>发布记录</span></el-menu-item>
         <el-menu-item index="/settings/projects"><span>项目管理</span></el-menu-item>
         <el-menu-item index="/settings/alert-rules"><span>告警规则</span></el-menu-item>
       </el-menu>

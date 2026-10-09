@@ -13,6 +13,7 @@ const routes = [
       { path: 'trends', name: 'trends', component: () => import('../views/trends/TrendsView.vue'), meta: { title: '历史趋势' } },
       { path: 'errors', name: 'errors', component: () => import('../views/errors/ErrorMonitorView.vue'), meta: { title: '错误监控' } },
       { path: 'alerts', name: 'alerts', component: () => import('../views/alerts/AlertLogView.vue'), meta: { title: '告警记录' } },
+      { path: 'deployments', name: 'deployments', component: () => import('../views/deployments/DeploymentView.vue'), meta: { title: '发布记录' } },
       { path: 'settings/projects', name: 'settings-projects', component: () => import('../views/settings/ProjectManageView.vue'), meta: { title: '项目管理' } },
       { path: 'settings/alert-rules', name: 'settings-rules', component: () => import('../views/settings/AlertRuleManageView.vue'), meta: { title: '告警规则' } }
     ]
