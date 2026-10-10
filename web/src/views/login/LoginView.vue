@@ -35,7 +35,7 @@ async function doLogin() {
   try {
     const resp = await login({ username: username.value, password: password.value })
     if (resp.ok) {
-      localStorage.setItem('token', resp.token)
+      // 认证态存于 HttpOnly Cookie（服务端 Set-Cookie），前端无需保存 token
       ElMessage.success('登录成功')
       router.push({ name: 'dashboard' })
     }

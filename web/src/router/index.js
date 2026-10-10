@@ -23,10 +23,10 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('token')
-  if (to.name !== 'login' && !token) {
-    return { name: 'login' }
-  }
+  // Cookie 认证模式下无法本地判断登录态，交由接口 401 兜底跳转；
+  // 登录页之外不再依赖 localStorage token。
+  if (to.name === 'login') return true
+  return true
 })
 
 export default router

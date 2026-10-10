@@ -33,12 +33,18 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import request from '../api/request'
 
 const router = useRouter()
 const isCollapsed = ref(false)
 
-function logout() {
-  localStorage.removeItem('token')
+async function logout() {
+  // 服务端清 HttpOnly Cookie，本地无需再删 token
+  try {
+    await request.post('/auth/logout')
+  } catch {
+    // 即使接口失败也继续跳转，登录页会重新建立会话
+  }
   router.push({ name: 'login' })
 }
 </script>
