@@ -12,24 +12,27 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
- * MD Viewer 后端（Spring Boot，systemd 托管）采集器。
+ * systemd 托管的后端项目采集器（如 MD Viewer 后端）。
  *
  * 职责：
  *  1. systemctl is-active / show -> 进程存活状态 metrics_process
  *  2. journalctl --since -60s 增量读取日志，匹配关键字 -> error_events（log_error）
  *     journalctl 本身支持按时间窗口过滤，无需像文件日志那样手动维护字节偏移；
  *     采集周期(30s) < --since 窗口(60s) 做兜底重叠，避免漏读；重叠部分通过滑动去重 Set 避免重复计数。
+ *
+ * 服务名取 projects.proc_name（回退 group_name），支持任意 systemd 项目，不再硬编码。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SystemdCollector {
 
-    private static final String SERVICE_NAME = "md-viewer";
     private static final Pattern ERROR_KEYWORDS = Pattern.compile("error|exception|fail|fatal", Pattern.CASE_INSENSITIVE);
     private static final int MAX_SEEN = 2000;
 
@@ -38,13 +41,17 @@ public class SystemdCollector {
     private final ErrorEventService errorEventService;
 
     // 滑动去重：记录最近处理过的日志行前缀，避免 --since 时间窗口重叠造成重复计数
-    private final Set<String> seenLines = new LinkedHashSet<>();
+    // 按服务名隔离，避免多 systemd 项目之间误判重复
+    private final Map<String, Set<String>> seenLinesByService = new ConcurrentHashMap<>();
 
     public synchronized void collect(TargetServersProperties.ServerConfig serverCfg, Long serverId, Project project) {
+        // 服务名取项目配置的 proc_name，未配置时回退项目组标识（兼容旧数据）
+        String serviceName = (project.getProcName() != null && !project.getProcName().isBlank())
+                ? project.getProcName() : project.getGroupName();
         try {
             String statusCmd = String.format(
                     "systemctl is-active %s 2>/dev/null; systemctl show %s -p MainPID,NRestarts --value 2>/dev/null",
-                    SERVICE_NAME, SERVICE_NAME);
+                    serviceName, serviceName);
             SshExecutor.ExecResult result = sshExecutor.exec(serverCfg, statusCmd);
             String[] lines = result.getStdout().trim().split("\n");
             String activeState = lines.length > 0 ? lines[0].trim() : "unknown";
@@ -57,7 +64,7 @@ public class SystemdCollector {
             m.setProjectId(project.getId());
             m.setServerId(serverId);
             m.setTimestamp(LocalDateTime.now());
-            m.setProcName(SERVICE_NAME);
+            m.setProcName(serviceName);
             m.setPid(mainPid);
             m.setStatus(status);
             m.setRestartTime(nRestarts);
@@ -68,23 +75,24 @@ public class SystemdCollector {
                         .projectId(project.getId())
                         .projectType("backend")
                         .type("process_crash")
-                        .message("systemd 服务 " + SERVICE_NAME + " 状态异常: " + activeState)
+                        .message("systemd 服务 " + serviceName + " 状态异常: " + activeState)
                         .stack("")
                         .url("")
                         .build());
             }
 
-            collectJournalErrors(serverCfg, project);
+            collectJournalErrors(serverCfg, project, serviceName);
         } catch (Exception e) {
             log.error("SystemdCollector failed for project {}: {}", project.getName(), e.getMessage());
         }
     }
 
-    private void collectJournalErrors(TargetServersProperties.ServerConfig serverCfg, Project project) throws Exception {
+    private void collectJournalErrors(TargetServersProperties.ServerConfig serverCfg, Project project, String serviceName) throws Exception {
         String cmd = String.format(
-                "journalctl -u %s --since \"-60s\" --no-pager -o short-iso 2>/dev/null", SERVICE_NAME);
+                "journalctl -u %s --since \"-60s\" --no-pager -o short-iso 2>/dev/null", serviceName);
         SshExecutor.ExecResult result = sshExecutor.exec(serverCfg, cmd);
 
+        Set<String> seenLines = seenLinesByService.computeIfAbsent(serviceName, k -> new LinkedHashSet<>());
         for (String line : result.getStdout().split("\n")) {
             if (line.isBlank() || !ERROR_KEYWORDS.matcher(line).find()) continue;
 
