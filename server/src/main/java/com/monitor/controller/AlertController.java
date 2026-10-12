@@ -5,13 +5,17 @@ import com.monitor.entity.AlertLog;
 import com.monitor.entity.AlertRule;
 import com.monitor.mapper.AlertLogMapper;
 import com.monitor.mapper.AlertRuleMapper;
+import com.monitor.service.NotifyService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -19,6 +23,15 @@ public class AlertController {
 
     private final AlertRuleMapper alertRuleMapper;
     private final AlertLogMapper alertLogMapper;
+    private final NotifyService notifyService;
+
+    /** 测试告警通道：立即通过指定渠道发送一条测试消息，验证通知链路（运维自检用） */
+    @PostMapping("/alert-test")
+    public ResponseEntity<?> testNotify(@RequestParam(defaultValue = "email") String channel) {
+        String message = String.format("🟡 测试告警 监控通知链路自检 渠道=%s 时间=%s", channel, LocalDateTime.now());
+        notifyService.send(channel, message);
+        return ResponseEntity.ok(Map.of("ok", true, "message", message));
+    }
 
     // ---------- 告警规则 CRUD ----------
 
