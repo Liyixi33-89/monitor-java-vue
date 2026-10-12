@@ -33,7 +33,7 @@ public class NginxLogCollector {
 
     public StatusCount collect(TargetServersProperties.ServerConfig serverCfg, Project project) {
         if (project.getLogPath() == null || project.getLogPath().isBlank()) {
-            return new StatusCount(0, 0);
+            return new StatusCount(0, 0, 0);
         }
         String logPath = project.getLogPath();
         try {
@@ -43,15 +43,16 @@ public class NginxLogCollector {
 
             if (currentSize <= offset) {
                 offsetTracker.set(logPath, currentSize);
-                return new StatusCount(0, 0);
+                return new StatusCount(0, 0, 0);
             }
 
             SshExecutor.ExecResult tailResult = sshExecutor.exec(
                     serverCfg, String.format("tail -c +%d %s | head -c 300000", offset + 1, logPath));
             offsetTracker.set(logPath, currentSize);
 
-            int count4xx = 0, count5xx = 0;
+            int count4xx = 0, count5xx = 0, count403 = 0;
             List<String> sample5xx = new ArrayList<>();
+            List<String> sample403 = new ArrayList<>();
 
             for (String line : tailResult.getStdout().split("\n")) {
                 if (line.isBlank()) continue;
@@ -62,6 +63,11 @@ public class NginxLogCollector {
                     count5xx++;
                     if (sample5xx.size() < 5) {
                         sample5xx.add(line.length() > 300 ? line.substring(0, 300) : line);
+                    }
+                } else if (code == 403) {
+                    count403++;
+                    if (sample403.size() < 5) {
+                        sample403.add(line.length() > 300 ? line.substring(0, 300) : line);
                     }
                 } else if (code >= 400) {
                     count4xx++;
@@ -80,10 +86,22 @@ public class NginxLogCollector {
                         .build());
             }
 
-            return new StatusCount(count4xx, count5xx);
+            // 403 权限类问题：>=3 条即告警（如 scp 后目录权限 700 导致 Nginx 无法读取静态资源）
+            if (count403 >= 3) {
+                errorEventService.upsert(ErrorEvent.builder()
+                        .projectId(project.getId())
+                        .projectType("frontend")
+                        .type("http_403")
+                        .message(String.format("Nginx 日志检测到 %d 条 403 响应（权限异常，采集窗口内）", count403))
+                        .stack(String.join("\n", sample403))
+                        .url(project.getAccessUrl())
+                        .build());
+            }
+
+            return new StatusCount(count4xx, count5xx, count403);
         } catch (Exception e) {
             log.error("NginxLogCollector failed for project {}: {}", project.getName(), e.getMessage());
-            return new StatusCount(0, 0);
+            return new StatusCount(0, 0, 0);
         }
     }
 
@@ -95,5 +113,5 @@ public class NginxLogCollector {
         }
     }
 
-    public record StatusCount(int count4xx, int count5xx) {}
+    public record StatusCount(int count4xx, int count5xx, int count403) {}
 }

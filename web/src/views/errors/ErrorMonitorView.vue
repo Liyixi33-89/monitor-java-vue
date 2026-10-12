@@ -15,6 +15,7 @@
           <el-option label="exception" value="exception" />
           <el-option label="process_crash" value="process_crash" />
           <el-option label="http_5xx" value="http_5xx" />
+          <el-option label="http_403" value="http_403" />
           <el-option label="log_error" value="log_error" />
         </el-select>
       </el-form-item>
