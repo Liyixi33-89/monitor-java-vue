@@ -40,6 +40,10 @@ public class TargetServersProperties {
     public static class Notify {
         private String wecomWebhookUrl;
         private String dingtalkWebhookUrl;
+        /** 邮件渠道：发件邮箱（须与 SMTP 账号一致） */
+        private String emailFrom;
+        /** 邮件渠道：收件邮箱，逗号分隔可多个 */
+        private String emailTo;
     }
 
     @Data

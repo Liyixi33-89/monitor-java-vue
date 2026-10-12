@@ -46,6 +46,8 @@ monitor:
   notify:
     wecom-webhook-url: ${WECOM_WEBHOOK_URL:}
     dingtalk-webhook-url: ${DINGTALK_WEBHOOK_URL:}
+    email-from: ${EMAIL_FROM:}
+    email-to: ${EMAIL_TO:alyx45048@gmail.com}
   cors:
     allowed-origins:
       - "http://111.231.57.177"
