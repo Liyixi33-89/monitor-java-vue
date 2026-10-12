@@ -35,6 +35,8 @@ public class Pm2Collector {
     private static final String PM2_HOME = "/root/.pm2";
     private static final Pattern ERROR_KEYWORDS =
             Pattern.compile("error|exception|fail|ECONNREFUSED|unhandledrejection", Pattern.CASE_INSENSITIVE);
+    /** Spring Boot 风格日志级别标记；命中 ERROR/WARN/FATAL 级别的行直接视为错误，不再依赖关键字 */
+    private static final Pattern LOG_LEVEL = Pattern.compile("\\s(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s");
 
     private final SshExecutor sshExecutor;
     private final MetricsProcessMapper metricsProcessMapper;
@@ -145,7 +147,11 @@ public class Pm2Collector {
 
         for (String line : tailResult.getStdout().split("\n")) {
             if (line.isBlank()) continue;
-            if (ERROR_KEYWORDS.matcher(line).find()) {
+            // 级别标记优先：带 " ERROR "/" WARN " 的行直接算错误；
+            // 无级别标记的行（纯 Node 报错堆栈）回退关键字匹配兜底
+            var levelMatcher = LOG_LEVEL.matcher(line);
+            boolean levelHit = levelMatcher.find() && isErrorLevel(levelMatcher.group(1));
+            if (levelHit || (!levelMatcher.find(0) && ERROR_KEYWORDS.matcher(line).find())) {
                 String type = line.contains("ECONNREFUSED") ? "api_error" : "exception";
                 errorEventService.upsert(ErrorEvent.builder()
                         .projectId(project.getId())
@@ -157,6 +163,11 @@ public class Pm2Collector {
                         .build());
             }
         }
+    }
+
+    /** ERROR/FATAL 记为错误；WARN 属于告警级别不算错误（err.log 已天然过滤大部分噪音） */
+    private boolean isErrorLevel(String level) {
+        return "ERROR".equals(level) || "FATAL".equals(level);
     }
 
     private long parseLongSafe(String s) {

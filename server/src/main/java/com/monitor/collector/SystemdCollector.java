@@ -33,7 +33,8 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class SystemdCollector {
 
-    private static final Pattern ERROR_KEYWORDS = Pattern.compile("error|exception|fail|fatal", Pattern.CASE_INSENSITIVE);
+    /** Spring Boot 默认日志行级别标记，如 " INFO "、" ERROR "、" WARN "（三空格对齐时含前导空格） */
+    private static final Pattern LOG_LEVEL = Pattern.compile("\\s(TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\\s");
     private static final int MAX_SEEN = 2000;
 
     private final SshExecutor sshExecutor;
@@ -94,7 +95,11 @@ public class SystemdCollector {
 
         Set<String> seenLines = seenLinesByService.computeIfAbsent(serviceName, k -> new LinkedHashSet<>());
         for (String line : result.getStdout().split("\n")) {
-            if (line.isBlank() || !ERROR_KEYWORDS.matcher(line).find()) continue;
+            if (line.isBlank()) continue;
+            // 解析 Spring Boot 日志级别标记（" ERROR "/" WARN "）：避免 INFO 行里
+            // 含 Exception 类名/关键字（如 DefaultSecurityFilterChain 启动日志）造成的误报
+            var levelMatcher = LOG_LEVEL.matcher(line);
+            if (!levelMatcher.find() || !isErrorLevel(levelMatcher.group(1))) continue;
 
             String lineKey = line.length() > 150 ? line.substring(0, 150) : line;
             if (seenLines.contains(lineKey)) continue;
@@ -126,5 +131,10 @@ public class SystemdCollector {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** ERROR/FATAL 记为 log_error；WARN 记为 warn（供日志关键字告警参考，不算错误级别） */
+    private boolean isErrorLevel(String level) {
+        return "ERROR".equals(level) || "FATAL".equals(level);
     }
 }
