@@ -45,6 +45,15 @@ public class AlertEngineService {
         }
     }
 
+    /** 项目规则的告警收件人：项目 notify_emails（逗号分隔）；全局规则/未配置时回退全局邮箱 */
+    private String resolveRecipients(AlertRule rule) {
+        if (rule.getProjectId() == null) return null;
+        Project project = projectService.getById(rule.getProjectId());
+        if (project == null) return null;
+        String emails = project.getNotifyEmails();
+        return (emails != null && !emails.isBlank()) ? emails : null;
+    }
+
     private void evaluateOne(AlertRule rule) {
         boolean triggered = switch (rule.getMetricType()) {
             case "cpu", "mem", "disk" -> checkHostMetricThreshold(rule);
@@ -56,14 +65,15 @@ public class AlertEngineService {
         };
 
         AlertLog openLog = alertLogMapper.findOpenByRule(rule.getId());
+        String recipients = resolveRecipients(rule);
         if (triggered && openLog == null) {
             AlertLog log = buildAlertLog(rule);
             alertLogMapper.insert(log);
-            notifyService.send(rule.getNotifyChannel(), buildTriggerMessage(rule, log));
+            notifyService.send(rule.getNotifyChannel(), buildTriggerMessage(rule, log), recipients);
         } else if (!triggered && openLog != null) {
             openLog.setResolvedAt(LocalDateTime.now());
             alertLogMapper.updateById(openLog);
-            notifyService.send(rule.getNotifyChannel(), buildResolvedMessage(rule, openLog));
+            notifyService.send(rule.getNotifyChannel(), buildResolvedMessage(rule, openLog), recipients);
         }
     }
 

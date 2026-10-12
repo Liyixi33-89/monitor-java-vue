@@ -29,9 +29,15 @@ public class EmailNotifyChannel implements NotifyChannel {
 
     @Override
     public void send(String message) {
+        send(message, null);
+    }
+
+    /** recipients 非空时发给指定告知人（逗号分隔），否则发全局配置的收件箱 */
+    @Override
+    public void send(String message, String recipients) {
         TargetServersProperties.Notify notify = properties.getNotify();
         String from = notify.getEmailFrom();
-        String to = notify.getEmailTo();
+        String to = (recipients != null && !recipients.isBlank()) ? recipients : notify.getEmailTo();
         if (from == null || from.isBlank() || to == null || to.isBlank()) {
             log.warn("Email notify not configured (from/to missing), skip: {}", message);
             return;

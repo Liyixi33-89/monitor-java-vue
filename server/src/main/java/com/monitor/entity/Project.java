@@ -26,5 +26,7 @@ public class Project {
     private String logPath;
     private String healthCheckUrl;
     private String owner;
+    /** 告知人邮箱，逗号分隔；为空时告警回退到全局邮箱 */
+    private String notifyEmails;
     private LocalDateTime createdAt;
 }

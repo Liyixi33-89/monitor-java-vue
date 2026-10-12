@@ -15,6 +15,12 @@
       <el-table-column prop="runtime" label="运行时" width="110" />
       <el-table-column prop="procName" label="进程/服务名" width="140" />
       <el-table-column prop="healthCheckUrl" label="健康检查URL" show-overflow-tooltip />
+      <el-table-column prop="notifyEmails" label="告知人邮箱" show-overflow-tooltip>
+        <template #default="{ row }">
+          <span v-if="row.notifyEmails">{{ row.notifyEmails }}</span>
+          <el-text v-else type="info" size="small">默认全局邮箱</el-text>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" width="130" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="openDialog(row)">编辑</el-button>
@@ -48,6 +54,9 @@
         <el-form-item label="进程/服务名"><el-input v-model="form.procName" placeholder="pm2进程名或systemd服务名" /></el-form-item>
         <el-form-item label="日志路径"><el-input v-model="form.logPath" placeholder="服务器上的日志绝对路径" /></el-form-item>
         <el-form-item label="健康检查URL"><el-input v-model="form.healthCheckUrl" /></el-form-item>
+        <el-form-item label="告知人邮箱">
+          <el-input v-model="form.notifyEmails" placeholder="多个邮箱用英文逗号分隔，留空则用全局邮箱" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -69,7 +78,7 @@ const form = ref({})
 
 function openDialog(row) {
   editingId.value = row ? row.id : null
-  form.value = row ? { ...row } : { groupName: '', name: '', type: 'frontend', runtime: 'static', accessUrl: '', procName: '', logPath: '', healthCheckUrl: '' }
+  form.value = row ? { ...row } : { groupName: '', name: '', type: 'frontend', runtime: 'static', accessUrl: '', procName: '', logPath: '', healthCheckUrl: '', notifyEmails: '' }
   dialogVisible.value = true
 }
 
