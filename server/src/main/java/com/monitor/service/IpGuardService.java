@@ -61,10 +61,10 @@ public class IpGuardService {
         }
         // 服务器自身（nginx 反代日志里会出现本机外网 IP）
         String selfHost = properties.getTargetServers().get(0).getHost();
-        if (ip.equals(selfHost)) return false;
-        return !inWhitelist(ip);
+        return !ip.equals(selfHost);
     }
 
+    /** 白名单：可见统计但永不封禁 */
     private boolean inWhitelist(String ip) {
         for (String w : props.getWhitelist()) {
             if (w.isBlank()) continue;
@@ -131,7 +131,7 @@ public class IpGuardService {
         return windowTotals;
     }
 
-    /** 超阈值的 IP 自动封禁（在窗口统计刷新后调用） */
+    /** 超阈值的 IP 自动封禁（在窗口统计刷新后调用）；白名单 IP 只统计不封禁 */
     public void enforceBanIfNeeded(Map<String, Integer> windowTotals) {
         if (!props.isEnabled()) return;
         for (var entry : windowTotals.entrySet()) {
@@ -139,6 +139,10 @@ public class IpGuardService {
             int total = entry.getValue();
             if (total < props.getBanThreshold()) continue;
             if (hasActiveBan(ip)) continue;
+            if (inWhitelist(ip)) {
+                log.info("IP {} 请求数 {} 超阈值但在白名单，跳过封禁", ip, total);
+                continue;
+            }
 
             ban(ip, "auto", String.format("单小时请求数 %d 超过阈值 %d", total, props.getBanThreshold()), total);
         }
@@ -146,8 +150,12 @@ public class IpGuardService {
 
     /** 执行封禁：写 DB + SSH 下发 iptables 规则 + 产出错误事件 */
     public void ban(String ip, String source, String reason, Integer requestCount) {
+        if (inWhitelist(ip)) {
+            log.info("IP {} 属于白名单，跳过封禁", ip);
+            return;
+        }
         if (!isExternalIp(ip)) {
-            log.info("IP {} 属于内网/白名单，跳过封禁", ip);
+            log.info("IP {} 属于内网/本机，跳过封禁", ip);
             return;
         }
         LocalDateTime now = LocalDateTime.now();

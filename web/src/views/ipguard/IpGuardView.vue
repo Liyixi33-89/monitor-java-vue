@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-alert type="info" :closable="false" style="margin-bottom: 12px"
-      title="外部 IP 访问监控：按小时窗口统计 nginx 访问，单 IP 单小时超过阈值（默认 500 次）自动封禁 web 端口，到期自动解封。内网/本机 IP 不统计。" />
+      title="外部 IP 访问监控：按小时窗口统计 nginx 访问，单 IP 单小时超过阈值自动封禁 web 端口，到期自动解封。内网/本机不统计；白名单 IP 统计可见但不封禁。" />
 
     <el-row :gutter="12" style="margin-bottom: 12px">
       <el-col :span="24">
