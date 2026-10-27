@@ -4,6 +4,7 @@ import com.monitor.config.TargetServersProperties;
 import com.monitor.entity.ErrorEvent;
 import com.monitor.entity.Project;
 import com.monitor.service.ErrorEventService;
+import com.monitor.service.IpGuardService;
 import com.monitor.util.ByteOffsetTracker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class NginxLogCollector {
     private final SshExecutor sshExecutor;
     private final ErrorEventService errorEventService;
     private final ByteOffsetTracker offsetTracker;
+    private final IpGuardService ipGuardService;
 
     public StatusCount collect(TargetServersProperties.ServerConfig serverCfg, Project project) {
         if (project.getLogPath() == null || project.getLogPath().isBlank()) {
@@ -50,11 +52,23 @@ public class NginxLogCollector {
                     serverCfg, String.format("tail -c +%d %s | head -c 300000", offset + 1, logPath));
             offsetTracker.set(logPath, currentSize);
 
+            List<String> rawLines = new ArrayList<>(List.of(tailResult.getStdout().split("\n")));
+
+            // IP 访问防护：外部 IP 按小时窗口聚合统计 + 超阈值自动封禁
+            try {
+                var windowTotals = ipGuardService.aggregateLines(rawLines);
+                if (!windowTotals.isEmpty()) {
+                    ipGuardService.enforceBanIfNeeded(windowTotals);
+                }
+            } catch (Exception e) {
+                log.warn("IpGuard aggregate failed for {}: {}", project.getName(), e.getMessage());
+            }
+
             int count4xx = 0, count5xx = 0, count403 = 0;
             List<String> sample5xx = new ArrayList<>();
             List<String> sample403 = new ArrayList<>();
 
-            for (String line : tailResult.getStdout().split("\n")) {
+            for (String line : rawLines) {
                 if (line.isBlank()) continue;
                 Matcher m = STATUS_REGEX.matcher(line);
                 if (!m.find()) continue;

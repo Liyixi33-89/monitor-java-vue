@@ -25,6 +25,13 @@ monitor:
   deploy-watch:
     enabled: false
     watches: []
+  # IP 访问防护：外部 IP 按小时统计，超阈值自动封禁 web 端口
+  ip-guard:
+    enabled: true
+    ban-threshold: 500
+    ban-hours: 24
+    block-ports: [80, 443, 8081, 4000]
+    whitelist: []
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-please-32bytes}
     expire-minutes: 720

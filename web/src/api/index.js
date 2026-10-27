@@ -25,3 +25,8 @@ export const listDeployments = (params) => request.get('/deployments', { params 
 export const createDeployment = (data) => request.post('/deployments', data)
 export const updateDeployment = (id, data) => request.put(`/deployments/${id}`, data)
 export const deleteDeployment = (id) => request.delete(`/deployments/${id}`)
+export const listIpVisits = (params) => request.get('/ip-guard/visits', { params })
+export const topIpVisits = (params) => request.get('/ip-guard/visits/top', { params })
+export const listIpBans = (params) => request.get('/ip-guard/bans', { params })
+export const banIp = (data) => request.post('/ip-guard/bans', data)
+export const liftIpBan = (ip) => request.delete(`/ip-guard/bans/${ip}`)

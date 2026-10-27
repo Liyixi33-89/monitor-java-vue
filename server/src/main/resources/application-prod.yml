@@ -32,6 +32,13 @@ monitor:
       - "2:/opt/mdviewer/md-viewer-server.jar"            # MD Viewer 后端
       - "3:/var/www/taskmanager/frontend/dist/index.html" # TaskManager 前端
       - "4:/var/www/taskmanager/backend/src/app.js"       # TaskManager 后端
+  # IP 访问防护：外部 IP 按小时统计，超阈值自动封禁 web 端口（不封 22 保留 SSH 逃生通道）
+  ip-guard:
+    enabled: ${IP_GUARD_ENABLED:true}
+    ban-threshold: ${IP_GUARD_THRESHOLD:2000}       # 单 IP 单小时请求数超过即封
+    ban-hours: ${IP_GUARD_HOURS:24}                 # 封禁时长，到期自动解封；0 = 永久
+    block-ports: [80, 443, 8081, 4000]
+    whitelist: ${IP_GUARD_WHITELIST:}               # 逗号分隔，精确 IP 或前缀，如 "119.147.*"
   jwt:
     # 生产环境必须通过环境变量注入，不再提供默认值
     secret: ${JWT_SECRET}
